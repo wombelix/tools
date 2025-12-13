@@ -42,6 +42,8 @@ repos:
   -   repo: https://github.com/golangci/golangci-lint
       rev: v2.7.2
       hooks:
+      # Workaround due to missing native monorepo support, see:
+      # https://github.com/golangci/golangci-lint/issues/828#issuecomment-1323922024
       -   id: golangci-lint
           name: golangci-lint-newrepo
           entry: bash -c 'cd newrepo && golangci-lint run --new-from-rev HEAD --fix'

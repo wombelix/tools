@@ -5,7 +5,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 )
@@ -21,6 +23,10 @@ func main() {
 	}
 
 	repoName := args[0]
+	repoDesc := ""
+	if len(args) == 2 {
+		repoDesc = args[1]
+	}
 
 	gitBinary, err := exec.LookPath("git")
 	if err != nil {
@@ -29,62 +35,61 @@ func main() {
 
 	env := append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 
-	// clone
-	cmd := exec.Command(gitBinary, "clone", REPOBASEURL+repoName)
-	cmd.Env = env
+	runGit := func(dir string, args ...string) {
+		cmd := exec.Command(gitBinary, args...)
+		cmd.Env = env
+		if dir != "" {
+			cmd.Dir = dir
+		}
 
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		panic(fmt.Sprintf("%s\n%s", err, out))
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			panic(fmt.Sprintf(" git %v\n%s\n%s", args, err, string(out)))
+		}
 	}
 
-	// rename master -> main
-	cmd = exec.Command(gitBinary, "branch", "-m", "main")
-	cmd.Env = env
-	cmd.Dir = "./" + repoName
+	runGit("", "clone", REPOBASEURL+repoName)
 
-	out, err = cmd.CombinedOutput()
+	workDir := "./" + repoName
+
+	runGit(workDir, "branch", "-m", "main")
+	runGit(workDir, "remote", "add", "tpl", REPOBASEURL+TPLREPONAME)
+	runGit(workDir, "pull", "tpl", "main")
+	runGit(workDir, "branch", "--unset-upstream")
+	runGit(workDir, "remote", "remove", "tpl")
+
+	ReplaceStringInFile(workDir+"/.build.yml", "tpl", repoName)
+	ReplaceStringInFile(workDir+"/README.md", "tpl", repoName)
+	ReplaceStringInFile(workDir+"/README.md", "Template repo with basic configs, LICENSE and README.", repoDesc)
+
+	runGit(workDir, "commit", "-am", "feat: update tpl files to new repo name")
+}
+
+func ReplaceStringInFile(path, search, replace string) {
+	info, err := os.Stat(path)
 	if err != nil {
-		panic(fmt.Sprintf("%s\n%s", err, out))
+		slog.Error(err.Error())
+		return
 	}
 
-	// add git remote tpl
-	cmd = exec.Command(gitBinary, "remote", "add", "tpl", REPOBASEURL+TPLREPONAME)
-	cmd.Env = env
-	cmd.Dir = "./" + repoName
-
-	out, err = cmd.CombinedOutput()
+	input, err := os.ReadFile(path)
 	if err != nil {
-		panic(fmt.Sprintf("%s\n%s", err, out))
+		slog.Error(err.Error())
+		return
 	}
 
-	// pull from remote tpl
-	cmd = exec.Command(gitBinary, "pull", "tpl", "main")
-	cmd.Env = env
-	cmd.Dir = "./" + repoName
+	searchBytes := []byte(search)
+	replaceBytes := []byte(replace)
 
-	out, err = cmd.CombinedOutput()
-	if err != nil {
-		panic(fmt.Sprintf("%s\n%s", err, out))
+	if !bytes.Contains(input, searchBytes) {
+		return
 	}
 
-	// untrack origin master
-	cmd = exec.Command(gitBinary, "branch", "--unset-upstream")
-	cmd.Env = env
-	cmd.Dir = "./" + repoName
+	output := bytes.ReplaceAll(input, searchBytes, replaceBytes)
 
-	out, err = cmd.CombinedOutput()
+	err = os.WriteFile(path, output, info.Mode())
 	if err != nil {
-		panic(fmt.Sprintf("%s\n%s", err, out))
-	}
-
-	// remove git remote tpl
-	cmd = exec.Command(gitBinary, "remote", "remove", "tpl")
-	cmd.Env = env
-	cmd.Dir = "./" + repoName
-
-	out, err = cmd.CombinedOutput()
-	if err != nil {
-		panic(fmt.Sprintf("%s\n%s", err, out))
+		slog.Error(err.Error())
+		return
 	}
 }
