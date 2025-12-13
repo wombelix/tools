@@ -39,11 +39,11 @@ repos:
   #    - id: tofu_tflint
   #    - id: tofu_validate
   # Golang
-  #-   repo: https://github.com/golangci/golangci-lint
-  #    rev: v1.61.0
-  #    hooks:
-  #    -   id: golangci-lint
-  #    -   id: golangci-lint-config-verify
+  -   repo: https://github.com/golangci/golangci-lint
+      rev: v1.61.0
+      hooks:
+      -   id: golangci-lint
+      -   id: golangci-lint-config-verify
   # AWS Cloudformation
   #-   repo: https://github.com/aws-cloudformation/cfn-lint
   #    rev: v1.38.2
