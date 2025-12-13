@@ -7,14 +7,21 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"regexp"
+	"strconv"
 )
 
 func main() {
 	const REPOBASEURL = "https://git.sr.ht/~wombelix/"
 	const TPLREPONAME = "tpl"
+	const NAME = "Dominik Wombacher"
+	const EMAIL = "dominik@wombacher.cc"
 
 	args := os.Args[1:]
 	if len(args) < 1 || len(args) > 2 {
@@ -58,14 +65,16 @@ func main() {
 	runGit(workDir, "branch", "--unset-upstream")
 	runGit(workDir, "remote", "remove", "tpl")
 
-	ReplaceStringInFile(workDir+"/.build.yml", "tpl", repoName)
-	ReplaceStringInFile(workDir+"/README.md", "tpl", repoName)
-	ReplaceStringInFile(workDir+"/README.md", "Template repo with basic configs, LICENSE and README.", repoDesc)
+	replaceStringInFile(workDir+"/.build.yml", "tpl", repoName)
+	replaceStringInFile(workDir+"/README.md", "tpl", repoName)
+	replaceStringInFile(workDir+"/README.md", "Template repo with basic configs, LICENSE and README.", repoDesc)
 
 	runGit(workDir, "commit", "-am", "feat: update tpl files to new repo name")
+
+	reuseRegistration(NAME, EMAIL, REPOBASEURL+repoName)
 }
 
-func ReplaceStringInFile(path, search, replace string) {
+func replaceStringInFile(path, search, replace string) {
 	info, err := os.Stat(path)
 	if err != nil {
 		slog.Error(err.Error())
@@ -90,6 +99,51 @@ func ReplaceStringInFile(path, search, replace string) {
 	err = os.WriteFile(path, output, info.Mode())
 	if err != nil {
 		slog.Error(err.Error())
+		return
+	}
+}
+
+func reuseRegistration(name, email, repo string) {
+	resp, err := http.Get("https://api.reuse.software/register")
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Warn("[REUSE] GET - Failed to close response body: " + err.Error())
+		}
+	}()
+
+	body, _ := io.ReadAll(resp.Body)
+
+	re := regexp.MustCompile(`name="csrf_token"[^>]*value="([^"]+)"`)
+	matches := re.FindSubmatch(body)
+	if len(matches) < 2 {
+		slog.Error("[REUSE] CSRF token not found")
+		return
+	}
+	token := string(matches[1])
+
+	data := url.Values{}
+	data.Set("csrf_token", token)
+	data.Set("name", name)
+	data.Set("confirm", email)
+	data.Set("project", repo)
+
+	resp, err = http.PostForm("https://api.reuse.software/register", data)
+	if err != nil {
+		slog.Error(err.Error())
+		return
+	}
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			slog.Warn("[REUSE] POST - Failed to close response body: " + err.Error())
+		}
+	}()
+
+	if resp.StatusCode != 200 {
+		slog.Error("[REUSE] Registration failed, status code: " + strconv.Itoa(resp.StatusCode))
 		return
 	}
 }
