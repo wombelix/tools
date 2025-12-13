@@ -14,7 +14,7 @@ repos:
         -   id: check-json
         -   id: check-added-large-files
   -   repo: https://github.com/markdownlint/markdownlint
-      rev: v0.12.0
+      rev: v0.15.0
       hooks:
         -   id: markdownlint_docker
             #exclude: CHANGELOG.md
@@ -27,7 +27,7 @@ repos:
       hooks:
         -   id: commitizen
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.29.1
+    rev: v8.30.0
     hooks:
       - id: gitleaks
   # Project specific
@@ -40,10 +40,11 @@ repos:
   #    - id: tofu_validate
   # Golang
   -   repo: https://github.com/golangci/golangci-lint
-      rev: v1.61.0
+      rev: v2.7.2
       hooks:
       -   id: golangci-lint
-      -   id: golangci-lint-config-verify
+          name: golangci-lint-newrepo
+          entry: bash -c 'cd newrepo && golangci-lint run --new-from-rev HEAD --fix'
   # AWS Cloudformation
   #-   repo: https://github.com/aws-cloudformation/cfn-lint
   #    rev: v1.38.2
