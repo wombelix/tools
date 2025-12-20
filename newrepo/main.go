@@ -74,7 +74,7 @@ func main() {
 
 	runGit("", "clone", repoUrlGit)
 
-	workDir := "./" + repoName
+	workDir := fmt.Sprintf("./%s", repoName)
 
 	runGit(workDir, "branch", "-m", "main")
 	runGit(workDir, "remote", "add", "tpl", repoTplUrlHttps)
@@ -82,54 +82,71 @@ func main() {
 	runGit(workDir, "branch", "--unset-upstream")
 	runGit(workDir, "remote", "remove", "tpl")
 
-	replaceStringInFile(workDir+"/.build.yml", "tpl", repoName)
-	replaceStringInFile(workDir+"/README.md", "tpl", repoName)
-	replaceStringInFile(workDir+"/README.md", "Template repo with basic configs, LICENSE and README.", repoDesc)
+	err = replaceStringInFile(fmt.Sprintf("%s/.build.yml", workDir), "tpl", repoName)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
+	err = replaceStringInFile(fmt.Sprintf("%s//README.md", workDir), "tpl", repoName)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+	err = replaceStringInFile(fmt.Sprintf("%s//README.md", workDir), "Template repo with basic configs, LICENSE and README.", repoDesc)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
 
 	runGit(workDir, "commit", "-am", "feat: update tpl files to new repo name")
 
 	reuseRegistration(NAME, EMAIL, repoUrl)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
 }
 
+func replaceStringInFile(path, search, replace string) error {
 	logger.Debug(fmt.Sprintf("[replaceStringInFile] path: %s, search: %s, replace: %s", path, search, replace))
 
 	info, err := os.Stat(path)
 	if err != nil {
-		slog.Error(err.Error())
-		return
+		return err
 	}
 
 	input, err := os.ReadFile(path)
 	if err != nil {
-		slog.Error(err.Error())
-		return
+		return err
 	}
 
 	searchBytes := []byte(search)
 	replaceBytes := []byte(replace)
 
 	if !bytes.Contains(input, searchBytes) {
-		return
+		return nil
 	}
 
 	output := bytes.ReplaceAll(input, searchBytes, replaceBytes)
 
 	err = os.WriteFile(path, output, info.Mode())
 	if err != nil {
-		slog.Error(err.Error())
-		return
+		return err
 	}
+
+	return nil
 }
 
+func reuseRegistration(name, email, repo string) error {
 	logger.Debug(fmt.Sprintf("[reuseRegistration] name: %s, email, %s, repo: %s", name, email, repo))
 
 	if err != nil {
-		slog.Error(err.Error())
-		return
+		return err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			slog.Warn("[REUSE] GET - Failed to close response body: " + err.Error())
+			slog.Warn(fmt.Sprintf("[REUSE] GET - Failed to close response body: %s", err.Error()))
 		}
 	}()
 
@@ -138,8 +155,7 @@ func main() {
 	re := regexp.MustCompile(`name="csrf_token"[^>]*value="([^"]+)"`)
 	matches := re.FindSubmatch(body)
 	if len(matches) < 2 {
-		slog.Error("[REUSE] CSRF token not found")
-		return
+		return fmt.Errorf("[REUSE] CSRF token not found")
 	}
 	token := string(matches[1])
 
@@ -151,17 +167,20 @@ func main() {
 
 	resp, err = http.PostForm("https://api.reuse.software/register", data)
 	if err != nil {
-		slog.Error(err.Error())
-		return
+		return err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			slog.Warn("[REUSE] POST - Failed to close response body: " + err.Error())
+			slog.Warn(fmt.Sprintf("[REUSE] POST - Failed to close response body: %s", err.Error()))
 		}
 	}()
 
 	postBody, _ := io.ReadAll(resp.Body)
 	logger.Debug(fmt.Sprintf("[reuseRegistration] POST Response Body - %s", string(postBody)))
+
+	return nil
+}
+
 func getLogLevelFromEnv() slog.Level {
 	levelStr := os.Getenv("LOG_LEVEL")
 
