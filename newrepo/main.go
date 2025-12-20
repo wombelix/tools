@@ -14,7 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"strconv"
+	"strings"
 )
 
 var logLevel slog.LevelVar
@@ -23,12 +23,15 @@ var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 }))
 
 func main() {
-	const REPOBASEURL = "https://git.sr.ht/~wombelix/"
+	const REPOBASEURL = "git.sr.ht/~wombelix/"
+	const REPOBASEURLGIT = "git@git.sr.ht:~wombelix/"
 	const TPLREPONAME = "tpl"
 	const NAME = "Dominik Wombacher"
 	const EMAIL = "dominik@wombacher.cc"
 
 	logLevel.Set(getLogLevelFromEnv())
+
+	repoBaseUrlHttp := fmt.Sprintf("https://%s", REPOBASEURL)
 
 	args := os.Args[1:]
 	if len(args) < 1 || len(args) > 2 {
@@ -41,6 +44,10 @@ func main() {
 	if len(args) == 2 {
 		repoDesc = args[1]
 	}
+
+	repoUrl := fmt.Sprintf("%s%s", REPOBASEURL, repoName)
+	repoUrlGit := fmt.Sprintf("%s%s", REPOBASEURLGIT, repoName)
+	repoTplUrlHttps := fmt.Sprintf("%s%s", repoBaseUrlHttp, TPLREPONAME)
 
 	logger.Debug("[gitBinary]")
 	gitBinary, err := exec.LookPath("git")
@@ -65,12 +72,12 @@ func main() {
 		}
 	}
 
-	runGit("", "clone", REPOBASEURL+repoName)
+	runGit("", "clone", repoUrlGit)
 
 	workDir := "./" + repoName
 
 	runGit(workDir, "branch", "-m", "main")
-	runGit(workDir, "remote", "add", "tpl", REPOBASEURL+TPLREPONAME)
+	runGit(workDir, "remote", "add", "tpl", repoTplUrlHttps)
 	runGit(workDir, "pull", "tpl", "main")
 	runGit(workDir, "branch", "--unset-upstream")
 	runGit(workDir, "remote", "remove", "tpl")
@@ -81,7 +88,7 @@ func main() {
 
 	runGit(workDir, "commit", "-am", "feat: update tpl files to new repo name")
 
-	reuseRegistration(NAME, EMAIL, REPOBASEURL+repoName)
+	reuseRegistration(NAME, EMAIL, repoUrl)
 }
 
 	logger.Debug(fmt.Sprintf("[replaceStringInFile] path: %s, search: %s, replace: %s", path, search, replace))
