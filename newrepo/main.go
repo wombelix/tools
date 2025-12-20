@@ -50,11 +50,13 @@ func main() {
 	repoUrlGit := fmt.Sprintf("%s%s", REPOBASEURLGIT, repoName)
 	repoTplUrlHttps := fmt.Sprintf("%s%s", repoBaseUrlHttp, TPLREPONAME)
 
-	logger.Debug("[gitBinary]")
+	logger.Info("initializing newrepo", "name", repoName)
+
 	gitBinary, err := exec.LookPath("git")
 	if err != nil {
 		panic(err)
 	}
+	logger.Debug("found git binary", "path", gitBinary)
 
 	env := append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
 
@@ -65,7 +67,7 @@ func main() {
 			cmd.Dir = dir
 		}
 
-		logger.Debug(fmt.Sprintf("[runGit] git %v", args))
+		logger.Debug("executing git command", "args", args)
 
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -73,16 +75,19 @@ func main() {
 		}
 	}
 
+	logger.Info("cloning repository", "url", repoUrlGit)
 	runGit("", "clone", repoUrlGit)
 
 	workDir := fmt.Sprintf("./%s", repoName)
 
+	logger.Info("setting up branch and pulling template")
 	runGit(workDir, "branch", "-m", "main")
 	runGit(workDir, "remote", "add", "tpl", repoTplUrlHttps)
 	runGit(workDir, "pull", "tpl", "main")
 	runGit(workDir, "branch", "--unset-upstream")
 	runGit(workDir, "remote", "remove", "tpl")
 
+	logger.Info("updating template files with repo name")
 	err = replaceStringInFile(fmt.Sprintf("%s/.build.yml", workDir), "tpl", repoName)
 	if err != nil {
 		logger.Error(err.Error())
@@ -100,9 +105,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	logger.Info("committing and pushing changes")
 	runGit(workDir, "commit", "-am", "feat: update tpl files to new repo name")
 	runGit(workDir, "push", "origin", "main", "-o", "skip-ci")
 
+	logger.Info("registering with REUSE", "repo", repoUrl)
 	reuseRegistration(NAME, EMAIL, repoUrl)
 	if err != nil {
 		logger.Error(err.Error())
@@ -111,7 +118,7 @@ func main() {
 }
 
 func replaceStringInFile(path, search, replace string) error {
-	logger.Debug(fmt.Sprintf("[replaceStringInFile] path: %s, search: %s, replace: %s", path, search, replace))
+	logger.Debug("replacing string in file", "path", path, "search", search, "replace", replace)
 
 	info, err := os.Stat(path)
 	if err != nil {
@@ -141,7 +148,7 @@ func replaceStringInFile(path, search, replace string) error {
 }
 
 func reuseRegistration(name, email, repo string) error {
-	logger.Debug(fmt.Sprintf("[reuseRegistration] name: %s, email, %s, repo: %s", name, email, repo))
+	logger.Debug("starting REUSE registration", "name", name, "email", email, "repo", repo)
 
 	jar, err := cookiejar.New(nil)
 	if err != nil {
@@ -155,7 +162,7 @@ func reuseRegistration(name, email, repo string) error {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			slog.Warn(fmt.Sprintf("[REUSE] GET - Failed to close response body: %s", err.Error()))
+			logger.Warn("failed to close GET response body", "error", err)
 		}
 	}()
 
@@ -180,16 +187,17 @@ func reuseRegistration(name, email, repo string) error {
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			slog.Warn(fmt.Sprintf("[REUSE] POST - Failed to close response body: %s", err.Error()))
+			logger.Warn("failed to close POST response body", "error", err)
 		}
 	}()
 
 	postBody, _ := io.ReadAll(resp.Body)
-	logger.Debug(fmt.Sprintf("[reuseRegistration] POST Response Body - %s", string(postBody)))
+	logger.Debug("REUSE registration response", "body", string(postBody))
 	if !bytes.Contains(postBody, []byte("Registration successful")) {
 		return fmt.Errorf("[REUSE] Registration failed, expected 'Registration successful' in response")
 	}
 
+	logger.Info("REUSE registration successful")
 	return nil
 }
 
