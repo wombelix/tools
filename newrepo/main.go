@@ -10,6 +10,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"os"
 	"os/exec"
@@ -100,6 +101,7 @@ func main() {
 	}
 
 	runGit(workDir, "commit", "-am", "feat: update tpl files to new repo name")
+	runGit(workDir, "push", "origin", "main", "-o", "skip-ci")
 
 	reuseRegistration(NAME, EMAIL, repoUrl)
 	if err != nil {
@@ -141,6 +143,13 @@ func replaceStringInFile(path, search, replace string) error {
 func reuseRegistration(name, email, repo string) error {
 	logger.Debug(fmt.Sprintf("[reuseRegistration] name: %s, email, %s, repo: %s", name, email, repo))
 
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return err
+	}
+	client := &http.Client{Jar: jar}
+
+	resp, err := client.Get("https://api.reuse.software/register")
 	if err != nil {
 		return err
 	}
@@ -165,7 +174,7 @@ func reuseRegistration(name, email, repo string) error {
 	data.Set("confirm", email)
 	data.Set("project", repo)
 
-	resp, err = http.PostForm("https://api.reuse.software/register", data)
+	resp, err = client.PostForm("https://api.reuse.software/register", data)
 	if err != nil {
 		return err
 	}
@@ -177,6 +186,9 @@ func reuseRegistration(name, email, repo string) error {
 
 	postBody, _ := io.ReadAll(resp.Body)
 	logger.Debug(fmt.Sprintf("[reuseRegistration] POST Response Body - %s", string(postBody)))
+	if !bytes.Contains(postBody, []byte("Registration successful")) {
+		return fmt.Errorf("[REUSE] Registration failed, expected 'Registration successful' in response")
+	}
 
 	return nil
 }
