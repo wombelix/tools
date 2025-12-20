@@ -17,11 +17,18 @@ import (
 	"strconv"
 )
 
+var logLevel slog.LevelVar
+var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+	Level: &logLevel,
+}))
+
 func main() {
 	const REPOBASEURL = "https://git.sr.ht/~wombelix/"
 	const TPLREPONAME = "tpl"
 	const NAME = "Dominik Wombacher"
 	const EMAIL = "dominik@wombacher.cc"
+
+	logLevel.Set(getLogLevelFromEnv())
 
 	args := os.Args[1:]
 	if len(args) < 1 || len(args) > 2 {
@@ -35,6 +42,7 @@ func main() {
 		repoDesc = args[1]
 	}
 
+	logger.Debug("[gitBinary]")
 	gitBinary, err := exec.LookPath("git")
 	if err != nil {
 		panic(err)
@@ -48,6 +56,8 @@ func main() {
 		if dir != "" {
 			cmd.Dir = dir
 		}
+
+		logger.Debug(fmt.Sprintf("[runGit] git %v", args))
 
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -74,7 +84,8 @@ func main() {
 	reuseRegistration(NAME, EMAIL, REPOBASEURL+repoName)
 }
 
-func replaceStringInFile(path, search, replace string) {
+	logger.Debug(fmt.Sprintf("[replaceStringInFile] path: %s, search: %s, replace: %s", path, search, replace))
+
 	info, err := os.Stat(path)
 	if err != nil {
 		slog.Error(err.Error())
@@ -103,8 +114,8 @@ func replaceStringInFile(path, search, replace string) {
 	}
 }
 
-func reuseRegistration(name, email, repo string) {
-	resp, err := http.Get("https://api.reuse.software/register")
+	logger.Debug(fmt.Sprintf("[reuseRegistration] name: %s, email, %s, repo: %s", name, email, repo))
+
 	if err != nil {
 		slog.Error(err.Error())
 		return
@@ -142,8 +153,19 @@ func reuseRegistration(name, email, repo string) {
 		}
 	}()
 
-	if resp.StatusCode != 200 {
-		slog.Error("[REUSE] Registration failed, status code: " + strconv.Itoa(resp.StatusCode))
-		return
+	postBody, _ := io.ReadAll(resp.Body)
+	logger.Debug(fmt.Sprintf("[reuseRegistration] POST Response Body - %s", string(postBody)))
+func getLogLevelFromEnv() slog.Level {
+	levelStr := os.Getenv("LOG_LEVEL")
+
+	switch strings.ToLower(levelStr) {
+	case "debug":
+		return slog.LevelDebug
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }
