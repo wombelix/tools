@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2025 Dominik Wombacher <dominik@wombacher.cc>
+#
+# SPDX-License-Identifier: Apache-2.0
+
+requests>=2.31.0
+beautifulsoup4>=4.12.2
+pytest>=7.4.3
+pytest-mock>=3.12.0
+responses>=0.24.1
