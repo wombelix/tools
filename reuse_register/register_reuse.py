@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# SPDX-FileCopyrightText: 2025 Dominik Wombacher <dominik@wombacher.cc>
+# SPDX-FileCopyrightText: 2025 - 2026 Dominik Wombacher <dominik@wombacher.cc>
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -79,8 +79,7 @@ def sanitize_project_url(url: str) -> str:
     url = url.replace("git://", "").replace("http://", "").replace("https://", "")
 
     # Remove .git suffix
-    if url.endswith(".git"):
-        url = url[:-4]
+    url = url.removesuffix(".git")
 
     return url
 
@@ -132,7 +131,7 @@ def parse_arguments() -> argparse.Namespace:
     return args
 
 
-def fetch_csrf_token() -> str:
+def fetch_csrf_token(session: requests.Session) -> str:
     """
     Fetch the CSRF token from the registration page.
 
@@ -144,7 +143,7 @@ def fetch_csrf_token() -> str:
     """
     try:
         logger.info(f"Fetching registration page from {REGISTER_URL}")
-        response = requests.get(REGISTER_URL)
+        response = session.get(REGISTER_URL)
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
@@ -165,7 +164,9 @@ def fetch_csrf_token() -> str:
         )
 
 
-def submit_registration(args: argparse.Namespace, csrf_token: str) -> bool:
+def submit_registration(
+    session: requests.Session, args: argparse.Namespace, csrf_token: str
+) -> bool:
     """
     Submit the registration form with the provided details.
 
@@ -192,7 +193,7 @@ def submit_registration(args: argparse.Namespace, csrf_token: str) -> bool:
     logger.info("Submitting registration form...")
 
     try:
-        response = requests.post(REGISTER_URL, data=form_data)
+        response = session.post(REGISTER_URL, data=form_data)
         response.raise_for_status()
 
         # Check for success indicators in the response
@@ -217,10 +218,12 @@ def main() -> None:
     args = parse_arguments()
     logger.info(f"Registering repository: {args.repo}")
 
-    csrf_token = fetch_csrf_token()
+    # One session for both requests so the cookie from GET is sent with POST
+    session = requests.Session()
+    csrf_token = fetch_csrf_token(session)
     logger.info("CSRF token retrieved successfully")
 
-    success = submit_registration(args, csrf_token)
+    success = submit_registration(session, args, csrf_token)
 
     if success:
         print(f"✅ Repository {args.repo} has been successfully registered!")

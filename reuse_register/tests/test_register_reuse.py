@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-
-# SPDX-FileCopyrightText: 2025 Dominik Wombacher <dominik@wombacher.cc>
+# SPDX-FileCopyrightText: 2025 - 2026 Dominik Wombacher <dominik@wombacher.cc>
 #
 # SPDX-License-Identifier: Apache-2.0
 
@@ -10,24 +8,25 @@ Tests for the REUSE Software Registration Tool.
 These tests verify the functionality without hitting production systems.
 """
 
-import sys
-import os
-import pytest
-import responses
-from unittest.mock import patch, MagicMock
 import argparse
+import os
+import sys
+from unittest.mock import MagicMock, patch
+
+import pytest
 import requests
+import responses
 
 # Add parent directory to path to import script
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from register_reuse import (
     fetch_csrf_token,
-    submit_registration,
     parse_arguments,
+    sanitize_project_url,
+    submit_registration,
     validate_email,
     validate_project_url,
-    sanitize_project_url,
 )
 
 # Sample HTML for testing
@@ -133,7 +132,7 @@ def test_fetch_csrf_token():
     )
 
     # Call the function that fetches the token
-    token = fetch_csrf_token()
+    token = fetch_csrf_token(requests.Session())
 
     # Verify correct token was extracted
     assert token == "test_csrf_token"
@@ -159,7 +158,7 @@ def test_submit_registration_success():
     args.updates = False
 
     # Test the submission
-    result = submit_registration(args, "test_csrf_token")
+    result = submit_registration(requests.Session(), args, "test_csrf_token")
 
     # Verify success
     assert result is True
@@ -193,7 +192,7 @@ def test_submit_registration_failure():
 
     # Test the submission with exception handling
     with pytest.raises(SystemExit):
-        submit_registration(args, "test_csrf_token")
+        submit_registration(requests.Session(), args, "test_csrf_token")
 
 
 @patch("register_reuse.parse_arguments")
@@ -217,8 +216,11 @@ def test_main(mock_submit, mock_fetch_token, mock_parse_args):
 
     # Verify all components were called with correct args
     mock_parse_args.assert_called_once()
-    mock_fetch_token.assert_called_once()
-    mock_submit.assert_called_once_with(mock_args, "test_csrf_token")
+    mock_fetch_token.assert_called_once()  # called with the session object
+    # Session object is positional arg 0, then args and token
+    mock_submit.assert_called_once()
+    assert mock_submit.call_args[0][1] == mock_args
+    assert mock_submit.call_args[0][2] == "test_csrf_token"
 
 
 @responses.activate
@@ -235,7 +237,7 @@ def test_fetch_csrf_token_connection_error():
 
     # Test that the function exits gracefully
     with pytest.raises(SystemExit):
-        fetch_csrf_token()
+        fetch_csrf_token(requests.Session())
 
 
 @responses.activate
@@ -252,4 +254,4 @@ def test_fetch_csrf_token_missing():
 
     # Test that the function exits gracefully
     with pytest.raises(SystemExit):
-        fetch_csrf_token()
+        fetch_csrf_token(requests.Session())
