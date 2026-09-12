@@ -22,8 +22,8 @@ from bs4 import BeautifulSoup
 
 # Configuration
 REGISTER_URL = "https://api.reuse.software/register"
-DEFAULT_NAME = "Your Name"
-DEFAULT_EMAIL = "your.email@example.com"
+DEFAULT_NAME = "Dominik Wombacher"
+DEFAULT_EMAIL = "dominik@wombacher.cc"
 
 # Set up logging
 logging.basicConfig(
@@ -144,6 +144,8 @@ def fetch_csrf_token(session: requests.Session) -> str:
     try:
         logger.info(f"Fetching registration page from {REGISTER_URL}")
         response = session.get(REGISTER_URL)
+        logger.debug(f"GET {REGISTER_URL} returned {response.status_code}")
+        logger.debug(f"Response cookies: {dict(session.cookies)}")
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
@@ -151,10 +153,11 @@ def fetch_csrf_token(session: requests.Session) -> str:
 
         if not csrf_token or "value" not in csrf_token.attrs:
             logger.error("CSRF token missing in the registration page response")
+            logger.debug(f"Response body:\n{response.text}")
             sys.exit("Error: CSRF token not found. Please try again later.")
 
         token_value = csrf_token["value"]
-        logger.debug(f"Found CSRF token: {token_value[:10]}...")
+        logger.debug(f"CSRF token: {token_value}")
         return token_value
 
     except requests.exceptions.RequestException as e:
@@ -191,20 +194,21 @@ def submit_registration(
         form_data["wantupdates"] = "y"
 
     logger.info("Submitting registration form...")
+    logger.debug(f"Form data: {form_data}")
 
     try:
         response = session.post(REGISTER_URL, data=form_data)
+        logger.debug(f"POST {REGISTER_URL} returned {response.status_code}")
         response.raise_for_status()
 
         # Check for success indicators in the response
         if "Thank you for registering" in response.text:
             logger.info(f"Successfully registered {args.repo}")
             return True
-        else:
-            logger.warning(
-                "Registration response did not contain expected success message"
-            )
-            return False
+
+        logger.warning("Registration response did not contain expected success message")
+        logger.debug(f"Response body:\n{response.text}")
+        return False
 
     except requests.exceptions.RequestException as e:
         logger.error(f"Error submitting the registration: {e}")
@@ -226,10 +230,10 @@ def main() -> None:
     success = submit_registration(session, args, csrf_token)
 
     if success:
-        print(f"✅ Repository {args.repo} has been successfully registered!")
+        print(f"Repository {args.repo} has been registered.")
         print("Please check your email for further steps.")
     else:
-        print("⚠️ Registration might have been processed but could not be confirmed")
+        print(f"Registration of {args.repo} failed.")
 
 
 if __name__ == "__main__":

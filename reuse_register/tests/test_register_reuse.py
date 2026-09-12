@@ -105,8 +105,8 @@ def test_parse_arguments(mock_argv):
 
     args = parse_arguments()
     assert args.repo == "github.com/user/repo"
-    assert args.name == "Your Name"  # Default
-    assert args.email == "your.email@example.com"  # Default
+    assert args.name == "Dominik Wombacher"  # Default
+    assert args.email == "dominik@wombacher.cc"  # Default
     assert args.updates is False
 
     # Test with URL sanitization
