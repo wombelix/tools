@@ -2,6 +2,6 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-module git.sr.ht/~wombelix/tools/newrepo
+module github.com/wombelix/tools/newrepo
 
 go 1.24.11
