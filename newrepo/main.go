@@ -94,12 +94,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = replaceStringInFile(fmt.Sprintf("%s//README.md", workDir), "tpl", repoName)
+	err = replaceStringInFile(fmt.Sprintf("%s/README.md", workDir), "tpl", repoName)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
 	}
-	err = replaceStringInFile(fmt.Sprintf("%s//README.md", workDir), "Template repo with basic configs, LICENSE and README.", repoDesc)
+	err = replaceStringInFile(fmt.Sprintf("%s/README.md", workDir), "Template repo with basic configs, LICENSE and README.", repoDesc)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
@@ -110,7 +110,7 @@ func main() {
 	runGit(workDir, "push", "origin", "main", "-o", "skip-ci")
 
 	logger.Info("registering with REUSE", "repo", repoUrl)
-	reuseRegistration(NAME, EMAIL, repoUrl)
+	err = reuseRegistration(NAME, EMAIL, repoUrl)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
