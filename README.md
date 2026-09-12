@@ -6,8 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 # Tools
 
-[![REUSE status](https://api.reuse.software/badge/git.sr.ht/~wombelix/tools)](https://api.reuse.software/info/git.sr.ht/~wombelix/tools)
-[![builds.sr.ht status](https://builds.sr.ht/~wombelix/tools.svg)](https://builds.sr.ht/~wombelix/tools?)
+<!-- markdownlint-disable MD013 -->
+[![REUSE status](https://api.reuse.software/badge/github.com/wombelix/tools)](https://api.reuse.software/info/github.com/wombelix/tools)
+[![Mirror](https://github.com/wombelix/tools/actions/workflows/mirror.yml/badge.svg)](https://github.com/wombelix/tools/actions/workflows/mirror.yml)
+<!-- markdownlint-enable MD013 -->
 
 ## Table of Contents
 
@@ -18,25 +20,17 @@ SPDX-License-Identifier: Apache-2.0
 ## Source
 
 The primary location is:
-[git.sr.ht/~wombelix/tools](https://git.sr.ht/~wombelix/tools)
+[github.com/wombelix/tools](https://github.com/wombelix/tools)
 
 Mirrors are available on
-[Codeberg](https://codeberg.org/wombelix/tools),
-[Gitlab](https://gitlab.com/wombelix/tools)
-and
-[GitHub](https://github.com/wombelix/tools).
+[Codeberg](https://codeberg.org/wombelix/tools) and
+[Gitlab](https://gitlab.com/wombelix/tools).
 
 ## Contribute
 
-Please don't hesitate to provide feedback,
-open an issue, or create a Pull / Merge Request.
+Pick the platform you prefer and are most comfortable with.
 
-Just pick the workflow or platform you prefer and are most comfortable with.
-
-Feedback, bug reports, or patches sent to my sr.ht list
-[~wombelix/inbox@lists.sr.ht](https://lists.sr.ht/~wombelix/inbox) or via
-[Email and Instant Messaging](https://dominik.wombacher.cc/pages/contact.html)
-are also always welcome.
+Provide feedback, open an issue or create a pull / merge request.
 
 ## License
 
