@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 Dominik Wombacher <dominik@wombacher.cc>
+// SPDX-FileCopyrightText: 2025 - 2026 Dominik Wombacher <dominik@wombacher.cc>
 //
 // SPDX-License-Identifier: Apache-2.0
 
@@ -24,8 +24,8 @@ var logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
 }))
 
 func main() {
-	const REPOBASEURL = "git.sr.ht/~wombelix/"
-	const REPOBASEURLGIT = "git@git.sr.ht:~wombelix/"
+	const REPOBASEURL = "github.com/wombelix/"
+	const REPOBASEURLGIT = "git@github.com:wombelix/"
 	const TPLREPONAME = "tpl"
 	const NAME = "Dominik Wombacher"
 	const EMAIL = "dominik@wombacher.cc"
@@ -71,7 +71,8 @@ func main() {
 
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			panic(fmt.Sprintf(" git %v\n%s\n%s", args, err, string(out)))
+			logger.Error("git command failed", "args", args, "error", err, "output", string(out))
+			os.Exit(1)
 		}
 	}
 
@@ -88,12 +89,6 @@ func main() {
 	runGit(workDir, "remote", "remove", "tpl")
 
 	logger.Info("updating template files with repo name")
-	err = replaceStringInFile(fmt.Sprintf("%s/.build.yml", workDir), "tpl", repoName)
-	if err != nil {
-		logger.Error(err.Error())
-		os.Exit(1)
-	}
-
 	err = replaceStringInFile(fmt.Sprintf("%s/README.md", workDir), "tpl", repoName)
 	if err != nil {
 		logger.Error(err.Error())
@@ -110,7 +105,7 @@ func main() {
 	runGit(workDir, "push", "origin", "main", "-o", "skip-ci")
 
 	logger.Info("registering with REUSE", "repo", repoUrl)
-	err = reuseRegistration(NAME, EMAIL, repoUrl)
+	err = reuseRegistration("https://api.reuse.software/register", NAME, EMAIL, repoUrl)
 	if err != nil {
 		logger.Error(err.Error())
 		os.Exit(1)
@@ -147,8 +142,8 @@ func replaceStringInFile(path, search, replace string) error {
 	return nil
 }
 
-func reuseRegistration(name, email, repo string) error {
-	logger.Debug("starting REUSE registration", "name", name, "email", email, "repo", repo)
+func reuseRegistration(registerURL, name, email, repo string) error {
+	logger.Debug("starting REUSE registration", "url", registerURL, "name", name, "email", email, "repo", repo)
 
 	jar, err := cookiejar.New(nil)
 	if err != nil {
@@ -156,7 +151,7 @@ func reuseRegistration(name, email, repo string) error {
 	}
 	client := &http.Client{Jar: jar}
 
-	resp, err := client.Get("https://api.reuse.software/register")
+	resp, err := client.Get(registerURL)
 	if err != nil {
 		return err
 	}
@@ -166,7 +161,10 @@ func reuseRegistration(name, email, repo string) error {
 		}
 	}()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read registration page: %w", err)
+	}
 
 	re := regexp.MustCompile(`name="csrf_token"[^>]*value="([^"]+)"`)
 	matches := re.FindSubmatch(body)
@@ -181,7 +179,7 @@ func reuseRegistration(name, email, repo string) error {
 	data.Set("confirm", email)
 	data.Set("project", repo)
 
-	resp, err = client.PostForm("https://api.reuse.software/register", data)
+	resp, err = client.PostForm(registerURL, data)
 	if err != nil {
 		return err
 	}
@@ -191,7 +189,10 @@ func reuseRegistration(name, email, repo string) error {
 		}
 	}()
 
-	postBody, _ := io.ReadAll(resp.Body)
+	postBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read registration response: %w", err)
+	}
 	logger.Debug("REUSE registration response", "body", string(postBody))
 	if !bytes.Contains(postBody, []byte("Registration successful")) {
 		return fmt.Errorf("[REUSE] Registration failed, expected 'Registration successful' in response")
