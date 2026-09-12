@@ -80,3 +80,13 @@ repos:
         args: [ --fix ]
       # Run the formatter.
       - id: ruff-format
+  # Ansible
+  #- hooks:
+  #  - id: ansible-lint
+  #  repo: https://github.com/ansible-community/ansible-lint
+  #  rev: v25.12.1
+  # GitHub Actions
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.10
+    hooks:
+      - id: actionlint-docker
