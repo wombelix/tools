@@ -1,5 +1,5 @@
 <!--
-SPDX-FileCopyrightText: 2025 Dominik Wombacher <dominik@wombacher.cc>
+SPDX-FileCopyrightText: 2025 - 2026 Dominik Wombacher <dominik@wombacher.cc>
 
 SPDX-License-Identifier: CC0-1.0
 -->
@@ -49,23 +49,19 @@ Basic usage with default values:
 ./register_reuse.py github.com/user/repo
 ```
 
-Customizing parameters:
+Override name and email:
 
 ```bash
 ./register_reuse.py \
-  --name "Your Name" \
-  --email "your.email@example.com" \
+  --name "Jane Doe" \
+  --email "jane@example.com" \
   github.com/user/repo
 ```
 
 Include opt-in for updates:
 
 ```bash
-./register_reuse.py \
-  --name "Your Name" \
-  --email "your.email@example.com" \
-  --updates \
-  github.com/user/repo
+./register_reuse.py --updates github.com/user/repo
 ```
 
 Enable debug logging:
@@ -103,13 +99,4 @@ pytest tests/
 
 ## License
 
-MIT License
-
-## Technical Details
-
-The implementation handles:
-
-1. Command-line arguments parsing with validation
-1. Fetching and extracting CSRF tokens from the registration form
-1. Proper form submission with normalized data
-1. Success/failure detection based on response content
+Apache-2.0
