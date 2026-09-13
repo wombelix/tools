@@ -47,6 +47,9 @@ repos:
       -   id: golangci-lint
           name: golangci-lint-newrepo
           entry: bash -c 'cd newrepo && golangci-lint run --new-from-rev HEAD --fix'
+      -   id: golangci-lint-fmt
+          name: golangci-lint-fmt-newrepo
+          entry: bash -c 'cd newrepo && golangci-lint fmt'
   # AWS Cloudformation
   #-   repo: https://github.com/aws-cloudformation/cfn-lint
   #    rev: v1.38.2
